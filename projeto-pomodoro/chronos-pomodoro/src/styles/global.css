@@ -25,3 +25,16 @@ body {
   background: var(--gray-900);
   color: var(--text-default);
 }
+
+.container-fluid {
+  max-width: auto;
+}
+
+.container {
+  max-width: 98rem;
+  margin: 0 auto;
+}
+
+.content {
+  margin: 3.2rem;
+}
