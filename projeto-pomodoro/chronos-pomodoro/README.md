@@ -1,131 +1,118 @@
-# 📐 Construindo o Layout Base: Container e Content
+# 📦 Refatorando o Layout: Criando o Componente Container
 
-Nesta aula, vamos começar a estruturar o layout principal da nossa aplicação. Em
-vez de simplesmente jogar os elementos soltos na tela, vamos criar um sistema de
-**Containers** para garantir que o conteúdo fique sempre centralizado,
-responsivo e com uma largura máxima agradável para a leitura.
+Na aula anterior, criamos uma estrutura de HTML com
+`<div className="container">` e `<div className="content">` para alinhar nosso
+layout. No entanto, percebemos que esse código iria se repetir em todas as
+seções do site (Logo, Menu, Formulário, Footer).
 
----
-
-## 🏗️ 1. A Estrutura Visual Desejada
-
-Se observarmos o layout final do nosso projeto (o cronômetro), podemos dividi-lo
-em seções horizontais empilhadas:
-
-1. Logo
-2. Menu
-3. Cronômetro / Formulário
-4. Rodapé (Footer)
-
-Para que todos esses elementos fiquem alinhados ao centro e não "colem" nas
-bordas de monitores muito largos (como telas Ultrawide), usaremos uma técnica
-clássica de CSS.
+No React, sempre que notamos repetição de interface, é um sinal claro de que
+devemos **criar um componente**!
 
 ---
 
-## 📦 2. Criando as Classes de Container no CSS Global
+## 🛠️ 1. Criando o Componente `Container`
 
-Vamos abrir o nosso arquivo `src/styles/global.css` e criar três classes
-utilitárias que nos ajudarão a controlar o layout da página.
+Vamos isolar essa estrutura repetitiva. Se quiser um desafio, tente criar este
+componente sozinho antes de olhar a resposta abaixo! Lembre-se que ele precisará
+receber elementos dentro dele (a propriedade `children`).
 
-### Classe 1: `.container-fluid` (Opcional, mas útil)
+1. Crie o arquivo `src/components/Container.tsx` (ou `.jsx`).
+2. Defina a tipagem para receber o `children`.
 
-Serve para quando queremos que a cor de fundo (background) ocupe 100% da largura
-da tela, mas o conteúdo interno continue centralizado e limitado.
+```tsx
+// src/components/Container.tsx
+import { ReactNode } from 'react';
+import styles from './Container.module.css'; // Já vamos criar este arquivo!
 
-```css
-.container-fluid {
-  width: 100%;
+// 1. Tipagem: O Container vai abraçar outros elementos (ReactNode)
+type ContainerProps = {
+  children: ReactNode;
+};
+
+// 2. Componente: Desestruturamos o children e aplicamos a estrutura base
+export function Container({ children }: ContainerProps) {
+  return (
+    <div className={styles.container}>
+      <div className={styles.content}>{children}</div>
+    </div>
+  );
 }
 ```
 
-### Classe 2: `.container` (O Limitador)
+## 🎨 2. Migrando o CSS para CSS Modules
 
-Esta é a classe mais importante. Ela define uma largura máxima para o conteúdo e
-usa a propriedade `margin: 0 auto` para centralizar essa "caixa" invisível no
-meio da tela.
+Na aula passada, colocamos as classes `.container` e `.content` no nosso arquivo
+global. Como agora temos um componente específico para isso, devemos isolar esse
+CSS para mantermos a organização (CSS Modules).
+
+1. Vá no arquivo src/styles/global.css e apague as classes `.container` e
+   `.content`.
+2. Crie um novo arquivo chamado `Container.module.css` na mesma pasta do seu
+   novo componente.
+3. Cole o CSS lá dentro:
 
 ```css
+/* src/components/Container.module.css */
+
 .container {
-  max-width: 98rem; /* Equivale a 980px */
-  margin: 0 auto; /* Centraliza horizontalmente */
+  max-width: 98rem;
+  margin: 0 auto;
 }
-```
 
-### Classe 3: `.content` (O Respiro)
-
-Mesmo com o `.container` limitando a largura, em telas pequenas (como
-celulares), o texto vai colar nas bordas do aparelho. A classe `.content` serve
-para adicionar um _padding_ (respiro) interno nas laterais.
-
-```css
 .content {
-  padding: 3.2rem; /* Adiciona espaço interno (32px) */
+  padding: 3.2rem;
 }
 ```
 
-### 🧱 3. Aplicando a Estrutura no `App.jsx`
+_Nota: Ao usar CSS Modules, o React vai gerar nomes de classes únicos (ex:
+`Container_container__1a2b3`), garantindo que esse estilo nunca conflite com
+outras partes do site._
 
-Agora que temos as nossas classes utilitárias prontas, vamos aplicá-las no nosso
-componente principal (`App.jsx`).
+## 🧩 3. Composição de Componentes (O "Quebra-Cabeça" do React)
 
-Para simular o nosso layout em seções, vamos criar múltiplos blocos usando a
-estrutura `container > content`:
+A verdadeira mágica do React acontece quando começamos a colocar componentes
+dentro de outros componentes (Composição).
 
-```js
-// src/App.jsx
+Vamos voltar ao nosso arquivo principal (`App.tsx`) e substituir aquele monte de
+`<div>` solta pelos nossos novos componentes: o `<Container>` e o `<Heading>`.
+
+```tsx
+// src/App.tsx
+import { Container } from './components/Container';
+import { Heading } from './components/Heading';
 
 export function App() {
   return (
     <>
       {/* Seção 1: Logo */}
-      <div className='container'>
-        <div className='content'>
-          <p>Logo do App</p>
-        </div>
-      </div>
+      <Container>
+        <Heading>Logo</Heading>
+      </Container>
 
       {/* Seção 2: Menu */}
-      <div className='container'>
-        <div className='content'>
-          <p>Menu de Navegação</p>
-        </div>
-      </div>
-
-      {/* Seção 3: Formulário / Cronômetro */}
-      <div className='container'>
-        <div className='content'>
-          <p>Área do Cronômetro</p>
-        </div>
-      </div>
-
-      {/* Seção 4: Footer */}
-      <div className='container'>
-        <div className='content'>
-          <p>Rodapé da Página</p>
-        </div>
-      </div>
+      <Container>
+        <Heading>Menu</Heading>
+      </Container>
     </>
   );
 }
 ```
 
-### 🧐 Como testar se funcionou?
+### 🧐 O que mudou?
 
-Se você abrir o navegador, verá que os textos estão perfeitamente alinhados e
-afastados das bordas. Para ver o efeito real, tente adicionar temporariamente um
-`background-color: red`; na classe `.container` e redimensione a janela do seu
-navegador.
+Olhe como o código do `App.tsx` ficou muito mais limpo e semântico!
 
-Você notará que a "caixa" vermelha nunca ultrapassa os `980px` de largura e fica
-sempre no centro da tela!
+- O `<Container>` é responsável **apenas** por alinhar e dar espaçamento
+  (layout).
+- O `<Heading>` é responsável **apenas** por exibir um título padronizado.
+- Nós apenas encaixamos um dentro do outro!
 
-### 🔜 Próximos Passos
+## 🔜 Próximos Passos (Spoiler!)
 
-Nossa estrutura de divs no `App.jsx` está funcionando perfeitamente, mas o
-código está muito repetitivo, não acha?
+Se você olhar o design final da nossa aplicação, notará que o Menu, a Logo e o
+Rodapé (Footer) se repetem de forma idêntica em **todas** as páginas (Página de
+Cronômetro, Página de Histórico, etc).
 
-O React foi feito exatamente para resolver esse problema de repetição! Na
-próxima aula, vamos pegar essa estrutura de `<div className="container">` e
-`<div className="content">` e transformá-la em um Componente Reutilizável
-inteligente.
+Em breve, usaremos essa mesma lógica de composição para criar um grande
+**Template de Página (Layout)**, onde o cabeçalho e rodapé já ficam fixos, e nós
+só trocamos o "miolo" do conteúdo!
