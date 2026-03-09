@@ -39,69 +39,6 @@ export function Heading(props: HeadingProps) {
 
 ## ✂️ 2. Deixando o Código Limpo: Desestruturação (Destructuring)
 
-Ficar escrevendo props.isso e props.aquilo toda hora deixa o código verboso. O
-JavaScript possui um recurso chamado Desestruturação, que nos permite extrair
-variáveis de dentro de um objeto logo na sua declaração.
-
-Podemos fazer a desestruturação diretamente nos parâmetros da função!
-
-### Antes (Verboso):
-
-```tsx
-export function Heading(props: HeadingProps) {
-  return <h1>{props.children}</h1>;
-}
-```
-
-### Depois (Limpo e Direto):
-
-```tsx
-export function Heading({ children }: HeadingProps) {
-  return <h1>{children}</h1>;
-}
-```
-
-# 🏷️ Tipagem de Props com TypeScript e Adição de Ícones
-
-Nesta aula, vamos evoluir o nosso componente `<Heading />`. Aprenderemos como
-utilizar o TypeScript para garantir que ele receba os tipos corretos de dados
-(tipagem das `props`), como deixar o código mais limpo usando desestruturação e
-como integrar ícones profissionais ao nosso projeto.
-
----
-
-## 🛡️ 1. O Problema da Tipagem Implícita (O temido `any`)
-
-Se você estiver usando TypeScript, notou que o parâmetro `props` do nosso
-componente estava sublinhado. Isso acontece porque o TypeScript não sabe o que
-tem dentro de `props`. Para ele, é um tipo `any` (qualquer coisa), o que quebra
-a principal vantagem do TypeScript: a segurança!
-
-Para resolver isso, precisamos criar um **Tipo (`type`)** ou **Interface** para
-descrever exatamente o que o nosso componente espera receber.
-
-### Criando a Tipagem
-
-1. Por convenção, nomeamos o tipo com o nome do componente seguido da palavra
-   `Props` (Ex: `HeadingProps`).
-2. Definimos quais chaves o objeto terá e quais os seus tipos de dados.
-
-```tsx
-// src/components/Heading.tsx
-
-// 1. Criamos o "contrato" do componente
-type HeadingProps = {
-  children: string; // Inicialmente, dizemos que children será apenas texto
-};
-
-// 2. Aplicamos o tipo ao parâmetro da função (props: HeadingProps)
-export function Heading(props: HeadingProps) {
-  return <h1 className='heading'>{props.children}</h1>;
-}
-```
-
-## ✂️ 2. Deixando o Código Limpo: Desestruturação (Destructuring)
-
 Ficar escrevendo `props.isso` e `props.aquilo` toda hora deixa o código verboso.
 O JavaScript possui um recurso chamado **Desestruturação**, que nos permite
 extrair variáveis de dentro de um objeto logo na sua declaração.
