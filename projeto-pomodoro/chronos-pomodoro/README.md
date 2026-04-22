@@ -1,56 +1,41 @@
-# Captura do submit e leitura dos valores da página Settings
+# Prática 80 - Validação de formulário na página Settings
 
 ## Objetivo
 
-Implementar a primeira camada de lógica da página `Settings`:
+Implementar a validação dos campos de configuração (foco, descanso curto e descanso longo) antes de salvar os dados no estado global.
 
-- Capturar o evento de envio do formulário.
-- Impedir o reload da página com `preventDefault`.
-- Ler os valores dos campos usando `useRef` (inputs não controlados).
-- Carregar valores padrão vindos do estado global em `defaultValue`.
+Nesta prática, o foco é:
 
-> Nesta etapa, ainda não vamos salvar nem validar os valores. O foco é estruturar o fluxo de leitura dos dados.
+- validar os dados no JavaScript (React);
+- acumular e exibir todos os erros de uma vez;
+- restringir os inputs para número com `type='number'`;
+- preparar o fluxo para, na próxima aula, disparar action/reducer para salvar no contexto.
 
 ## Contexto da aula
 
-Agora que a tela de configurações já existe, precisamos começar a tratar o formulário.
+Com o submit já funcionando, agora precisamos garantir que os valores informados são válidos.
 
-Como a validação será feita apenas no envio (e não em tempo real enquanto digita), foi escolhida a abordagem com **inputs não controlados** + **refs**:
+A abordagem escolhida foi:
 
-- `workTimeInput`
-- `shortBreakTimeInput`
-- `longBreakTimeInput`
+1. limpar mensagens antigas (`showMessage.dismiss()`),
+2. ler os valores via `useRef`,
+3. converter para número com `Number(...)`,
+4. validar e adicionar mensagens no array `formErrors`,
+5. exibir todos os erros com `showMessage.error(...)`,
+6. interromper com `return` se houver erro.
 
-No submit, os valores são capturados por `ref.current?.value` e exibidos no console para teste inicial do fluxo.
+## Regras de validação aplicadas
 
-## Requisitos da prática
-
-1. Criar a função `handleSaveSettings`.
-2. Tipar o evento como `React.FormEvent<HTMLFormElement>`.
-3. Executar `e.preventDefault()` no início do handler.
-4. Criar refs com `useRef<HTMLInputElement>(null)` para os três inputs.
-5. Associar cada ref no respectivo `DefaultInput`.
-6. Ler os valores no submit com `current?.value`.
-7. Exibir os três valores com `console.log(...)` para validação manual.
-8. Preencher os campos com os valores atuais do contexto:
-   - `state.config.workTime`
-   - `state.config.shortBreakTime`
-   - `state.config.longBreakTime`
+- Todos os campos devem ser numéricos.
+- `workTime` (Foco): mínimo **1**, máximo **99**.
+- `shortBreakTime` (Descanso curto): mínimo **1**, máximo **30**.
+- `longBreakTime` (Descanso longo): mínimo **1**, máximo **60**.
 
 ## Resultado esperado
 
-- O formulário não recarrega a página ao clicar em salvar.
-- O console mostra os valores digitados em foco, descanso curto e descanso longo.
-- Os campos já aparecem preenchidos com os dados atuais do estado global ao abrir a página.
-
-## Próximo passo (próxima aula)
-
-- Validar os valores recebidos.
-- Converter os dados para número.
-- Aplicar regras mínimas de faixa e obrigatoriedade.
-- Disparar atualização do estado global quando tudo estiver válido.
-
----
+- Se qualquer campo estiver inválido, o usuário recebe mensagem de erro e o formulário não prossegue.
+- Se os três valores estiverem corretos, o fluxo chega no ponto de salvar (`console.log('SALVAR')`), que será substituído pela atualização real do estado na próxima prática.
+- Os inputs passam a ser numéricos no HTML (`type='number'`), mas a validação principal continua no JavaScript.
 
 ## Código-fonte do arquivo modificado nesta branch
 
@@ -65,6 +50,7 @@ import { Heading } from '../../components/Heading';
 import { MainTemplate } from '../../templates/MainTemplate';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useRef } from 'react';
+import { showMessage } from '../../adapters/showMessage';
 
 export function Settings() {
   const { state } = useTaskContext();
@@ -74,12 +60,38 @@ export function Settings() {
 
   function handleSaveSettings(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    showMessage.dismiss();
 
-    const workTime = workTimeInput.current?.value;
-    const shortBreakTime = shortBreakTimeInput.current?.value;
-    const longBreakTime = longBreakTimeInput.current?.value;
+    const formErrors = [];
 
-    console.log(workTime, shortBreakTime, longBreakTime);
+    const workTime = Number(workTimeInput.current?.value);
+    const shortBreakTime = Number(shortBreakTimeInput.current?.value);
+    const longBreakTime = Number(longBreakTimeInput.current?.value);
+
+    if (isNaN(workTime) || isNaN(shortBreakTime) || isNaN(longBreakTime)) {
+      formErrors.push('Digite apenas números para TODOS os campos');
+    }
+
+    if (workTime < 1 || workTime > 99) {
+      formErrors.push('Digite valores entre 1 e 99 para foco');
+    }
+
+    if (shortBreakTime < 1 || shortBreakTime > 30) {
+      formErrors.push('Digite valores entre 1 e 30 para descanso curto');
+    }
+
+    if (longBreakTime < 1 || longBreakTime > 60) {
+      formErrors.push('Digite valores entre 1 e 60 para descanso longo');
+    }
+
+    if (formErrors.length > 0) {
+      formErrors.forEach(error => {
+        showMessage.error(error);
+      });
+      return;
+    }
+
+    console.log('SALVAR');
   }
 
   return (
@@ -103,6 +115,7 @@ export function Settings() {
               labelText='Foco'
               ref={workTimeInput}
               defaultValue={state.config.workTime}
+              type='number'
             />
           </div>
           <div className='formRow'>
@@ -111,6 +124,7 @@ export function Settings() {
               labelText='Descanso curto'
               ref={shortBreakTimeInput}
               defaultValue={state.config.shortBreakTime}
+              type='number'
             />
           </div>
           <div className='formRow'>
@@ -119,6 +133,7 @@ export function Settings() {
               labelText='Descanso longo'
               ref={longBreakTimeInput}
               defaultValue={state.config.longBreakTime}
+              type='number'
             />
           </div>
           <div className='formRow'>
@@ -135,13 +150,13 @@ export function Settings() {
 }
 ```
 
----
+## Checklist
 
-## Checklist de validação
-
-- [ ] `onSubmit` implementado no formulário.
-- [ ] `preventDefault` evitando reload.
-- [ ] `useRef` criado para os 3 campos.
-- [ ] Valores capturados por `current?.value`.
-- [ ] `defaultValue` ligado ao `state.config`.
-- [ ] `console.log` exibindo os 3 valores ao salvar.
+- [ ] Formulário impede reload (`preventDefault`).
+- [ ] Mensagens antigas são limpas antes de validar (`showMessage.dismiss()`).
+- [ ] Valores convertidos com `Number(...)`.
+- [ ] Validação numérica geral com `isNaN`.
+- [ ] Validação de faixas por campo (foco, descanso curto e descanso longo).
+- [ ] Exibição de erros acumulados com `formErrors.forEach(...)`.
+- [ ] Inputs usando `type='number'`.
+- [ ] Fluxo de sucesso chegando no ponto de salvar.
