@@ -1,203 +1,148 @@
-# Correção de bug ao sair da tela de histórico
+# Prática 78 - Criando a estrutura da página de configurações
 
 ## Objetivo
 
-Corrigir o bug em que o toast de confirmação continua visível ao sair da página `History`, causando comportamento inconsistente quando o usuário tenta confirmar a ação fora da tela de histórico.
+Construir a estrutura inicial da página `Settings`, conectá-la ao roteamento principal e preparar o formulário para, na próxima prática, receber validações e persistência das configurações.
 
-## Cenário do bug
+## Contexto da aula
 
-Durante os testes, foi identificado o seguinte comportamento:
+Até este ponto da aplicação, já existe menu com link para configurações, mas faltava a tela em si.  
+Nesta prática, o foco é apenas a **estrutura de UI**:
 
-1. O usuário abre a confirmação para apagar histórico.
-2. Sai da página `History` sem clicar em confirmar/cancelar.
-3. O toast continua na tela.
-4. Se clicar em confirmar fora da página `History`, a lógica baseada no estado local da página pode não executar como esperado, pois o componente já foi desmontado.
+- Título da página.
+- Texto explicativo.
+- Formulário com três campos (foco, descanso curto e descanso longo).
+- Botão de salvar com ícone.
+- Rota `/settings/` adicionada no roteador.
 
-## Estratégia aplicada nesta prática
+> Importante: nesta etapa ainda não há lógica de envio, validação dos valores ou atualização de estado global.
 
-Utilizar o **cleanup do `useEffect`** no componente `History` para remover qualquer toast ativo quando a página for desmontada.
+## Requisitos da prática
 
-### Implementação
+1. Criar a página `Settings` em `src/pages/Settings/index.tsx`.
+2. Usar `MainTemplate`, `Container`, `Heading`, `DefaultInput` e `DefaultButton`.
+3. Exibir os três campos:
+   - `workTime` com label **Foco**
+   - `shortBreakTime` com label **Descanso curto**
+   - `longBreakTime` com label **Descanso longo**
+4. Adicionar botão com `SaveIcon` e atributos de acessibilidade:
+   - `aria-label="Salvar configurações"`
+   - `title="Salvar configurações"`
+5. Registrar a rota `/settings/` no `MainRouter`.
 
-- Adicionar um `useEffect` com array de dependências vazio (`[]`).
-- No `return` desse efeito (função de cleanup), chamar `showMessage.dismiss()`.
+## Observações importantes
 
-Com isso:
-
-- Ao navegar para fora de `History`, os toasts são fechados automaticamente.
-- O usuário não fica com confirmação “pendurada” na UI.
-- Evitamos ação de confirmação fora do contexto da página.
+- O formulário ainda está estrutural (`action=''`) e será evoluído na próxima aula.
+- O texto explicativo foi centralizado com `style` inline (`textAlign: 'center'`) apenas como ajuste visual rápido.
+- As classes `form` e `formRow` são globais e reaproveitadas nesta tela.
+- O import de `Settings` deve apontar para a página correta, pois o nome é comum em libs e pode gerar confusão de autoimport.
 
 ## Resultado esperado
 
-- Se abrir o diálogo de confirmação e sair da página `History`, o diálogo deve desaparecer.
-- Não deve ser possível confirmar uma ação de limpar histórico fora da tela de histórico.
-- O fluxo de confirmação/cancelamento continua funcionando normalmente dentro da página.
+- Ao clicar no menu de configurações, a rota `/settings/` carrega a nova tela.
+- A página mostra:
+  - Heading “Configurações”
+  - Parágrafo explicativo
+  - Três inputs
+  - Botão de salvar com ícone
+- Ainda ocorre submit padrão do formulário (comportamento esperado nesta etapa inicial).
 
-## Arquivo modificado nesta branch
+---
 
-### `src/pages/History/index.tsx`
+## Código-fonte dos arquivos novos e modificados desta branch
+
+### Novo arquivo: `src/pages/Settings/index.tsx`
 
 ```tsx
-import { TrashIcon } from 'lucide-react';
+import { SaveIcon } from 'lucide-react';
 import { Container } from '../../components/Container';
 import { DefaultButton } from '../../components/DefaultButton';
+import { DefaultInput } from '../../components/DefaultInput';
 import { Heading } from '../../components/Heading';
 import { MainTemplate } from '../../templates/MainTemplate';
 
-import styles from './styles.module.css';
-import { useTaskContext } from '../../contexts/TaskContext';
-import { formatDate } from '../../utils/formatDate';
-import { getTaskStatus } from '../../utils/getTaskStatus';
-import { sortTasks, type SortTasksOptions } from '../../utils/sortTasks';
-import { useEffect, useState } from 'react';
-import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
-import { showMessage } from '../../adapters/showMessage';
-
-export function History() {
-  const { state, dispatch } = useTaskContext();
-  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
-  const hasTasks = state.tasks.length > 0;
-
-  const [sortTasksOptions, setSortTaskOptions] = useState<SortTasksOptions>(
-    () => {
-      return {
-        tasks: sortTasks({ tasks: state.tasks }),
-        field: 'startDate',
-        direction: 'desc',
-      };
-    },
-  );
-
-  useEffect(() => {
-    setSortTaskOptions(prevState => ({
-      ...prevState,
-      tasks: sortTasks({
-        tasks: state.tasks,
-        direction: prevState.direction,
-        field: prevState.field,
-      }),
-    }));
-  }, [state.tasks]);
-
-  useEffect(() => {
-    if (!confirmClearHistory) return;
-
-    setConfirmClearHistory(false);
-
-    dispatch({ type: TaskActionTypes.RESET_STATE });
-  }, [confirmClearHistory, dispatch]);
-
-  useEffect(() => {
-    return () => {
-      showMessage.dismiss();
-    };
-  }, []);
-
-  function handleSortTasks({ field }: Pick<SortTasksOptions, 'field'>) {
-    const newDirection = sortTasksOptions.direction === 'desc' ? 'asc' : 'desc';
-
-    setSortTaskOptions({
-      tasks: sortTasks({
-        direction: newDirection,
-        tasks: sortTasksOptions.tasks,
-        field,
-      }),
-      direction: newDirection,
-      field,
-    });
-  }
-
-  function handleResetHistory() {
-    showMessage.dismiss();
-    showMessage.confirm('Tem certeza?', confirmation => {
-      setConfirmClearHistory(confirmation);
-    });
-  }
-
+export function Settings() {
   return (
     <MainTemplate>
       <Container>
-        <Heading>
-          <span>History</span>
-          {hasTasks && (
-            <span className={styles.buttonContainer}>
-              <DefaultButton
-                icon={<TrashIcon />}
-                color='red'
-                aria-label='Apagar todo o histórico'
-                title='Apagar histórico'
-                onClick={handleResetHistory}
-              />
-            </span>
-          )}
-        </Heading>
+        <Heading>Configurações</Heading>
       </Container>
 
       <Container>
-        {hasTasks && (
-          <div className={styles.responsiveTable}>
-            <table>
-              <thead>
-                <tr>
-                  <th
-                    onClick={() => handleSortTasks({ field: 'name' })}
-                    className={styles.thSort}
-                  >
-                    Tarefa ↕
-                  </th>
-                  <th
-                    onClick={() => handleSortTasks({ field: 'duration' })}
-                    className={styles.thSort}
-                  >
-                    Duração ↕
-                  </th>
-                  <th
-                    onClick={() => handleSortTasks({ field: 'startDate' })}
-                    className={styles.thSort}
-                  >
-                    Data ↕
-                  </th>
-                  <th>Status</th>
-                  <th>Tipo</th>
-                </tr>
-              </thead>
+        <p style={{ textAlign: 'center' }}>
+          Modifique as configurações para tempo de foco, descanso curso e
+          descanso longo.
+        </p>
+      </Container>
 
-              <tbody>
-                {sortTasksOptions.tasks.map(task => {
-                  const taskTypeDictionary = {
-                    workTime: 'Foco',
-                    shortBreakTime: 'Descanso curto',
-                    longBreakTime: 'Descanso longo',
-                  };
-                  return (
-                    <tr key={task.id}>
-                      <td>{task.name}</td>
-                      <td>{task.duration}min</td>
-                      <td>{formatDate(task.startDate)}</td>
-                      <td>{getTaskStatus(task, state.activeTask)}</td>
-                      <td>{taskTypeDictionary[task.type]}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <Container>
+        <form action='' className='form'>
+          <div className='formRow'>
+            <DefaultInput id='workTime' labelText='Foco' />
           </div>
-        )}
-        {!hasTasks && (
-          <p style={{ textAlign: 'center', fontWeight: 'bold' }}>
-            Ainda não existem tarefas criadas.
-          </p>
-        )}
+          <div className='formRow'>
+            <DefaultInput id='shortBreakTime' labelText='Descanso curto' />
+          </div>
+          <div className='formRow'>
+            <DefaultInput id='longBreakTime' labelText='Descanso longo' />
+          </div>
+          <div className='formRow'>
+            <DefaultButton
+              icon={<SaveIcon />}
+              aria-label='Salvar configurações'
+              title='Salvar configurações'
+            />
+          </div>
+        </form>
       </Container>
     </MainTemplate>
   );
 }
 ```
 
-## Checklist
+### Arquivo modificado: `src/routers/MainRouter/index.tsx`
 
-- [ ] Ao abrir confirmação e sair da tela, o toast é removido automaticamente.
-- [ ] Confirmar/cancelar dentro da tela `History` continua funcionando.
-- [ ] Não há toast “preso” ao navegar para outras rotas.
-- [ ] O histórico só é apagado quando a confirmação for positiva.
+```tsx
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router';
+import { AboutPomodoro } from '../../pages/AboutPomodoro';
+import { NotFound } from '../../pages/NotFound';
+import { Home } from '../../pages/Home';
+import { useEffect } from 'react';
+import { History } from '../../pages/History';
+import { Settings } from '../../pages/Settings';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pathname]);
+
+  return null;
+}
+
+export function MainRouter() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/history/' element={<History />} />
+        <Route path='/settings/' element={<Settings />} />
+        <Route path='/about-pomodoro/' element={<AboutPomodoro />} />
+        <Route path='*' element={<NotFound />} />
+      </Routes>
+      <ScrollToTop />
+    </BrowserRouter>
+  );
+}
+```
+
+---
+
+## Checklist de entrega
+
+- [ ] Página `Settings` criada com estrutura base.
+- [ ] Inputs de foco, descanso curto e descanso longo renderizados.
+- [ ] Botão com `SaveIcon` e atributos de acessibilidade presentes.
+- [ ] Rota `/settings/` adicionada no `MainRouter`.
+- [ ] Navegação via menu funcionando.
