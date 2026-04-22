@@ -1,111 +1,73 @@
-## Limpar histórico com confirmação, `RESET_STATE` e lista vazia
+# Confirmação customizada com React-Toastify
 
-### Objetivo
+## Objetivo
 
-- Ao clicar no botão de apagar histórico, pedir **confirmação** (`window.confirm`).
-- Se o usuário confirmar, **zerar o estado global** das tasks via `dispatch` com a ação `RESET_STATE`.
-- No **reducer**, fazer `RESET_STATE` retornar uma cópia do **`initialTaskState`** (estado inicial), em vez de um objeto “na mão”.
-- Como a tabela usa **estado local** (`sortTasksOptions`) derivado de `state.tasks`, usar **`useEffect`** para **reordenar** sempre que `state.tasks` mudar (inclusive após o reset).
-- Quando **não houver tasks**, não mostrar a tabela nem o botão de lixeira; exibir uma **mensagem** (parágrafo). Opcionalmente usar `style` inline para alinhamento (bônus da aula).
+Substituir o `window.confirm` por um diálogo visual customizado com `react-toastify`, mantendo o fluxo de confirmação para apagar o histórico.
 
-### Bônus (próxima aula)
+## Contexto da aula
 
-O `confirm` do navegador funciona, mas não é o fluxo ideal de UI. Na sequência pode-se substituir por **Toastify** (ou similar) com botões customizados e `onClose` com `reason` para simular OK/Cancelar.
+Nesta prática, vamos:
 
----
+- Exibir um toast de confirmação que **não fecha sozinho**.
+- Renderizar um **componente React** dentro do toast.
+- Capturar a decisão do usuário (`true` para confirmar, `false` para cancelar).
+- Encapsular a lógica no adapter `showMessage.confirm(...)` para evitar repetição.
+- Aplicar esse fluxo na tela de histórico antes de disparar `RESET_STATE`.
 
-### 1) Reducer: `RESET_STATE` → estado inicial
+## Requisitos da implementação
 
-Arquivo: `src/contexts/TaskContext/taskReducer.ts`
+1. Criar o componente `Dialog` em `src/components/Dialog/index.tsx`.
+2. Estilizar o componente com `src/components/Dialog/styles.module.css`.
+3. Adicionar no adapter `showMessage` o método:
+   - `confirm(data: string, onClosing: (confirmation: boolean) => void)`
+4. Configurar o toast de confirmação com:
+   - `autoClose: false`
+   - `closeOnClick: false`
+   - `closeButton: false`
+   - `draggable: false`
+5. Na página `History`:
+   - Trocar confirmação antiga por `showMessage.confirm(...)`.
+   - Salvar o retorno da confirmação no estado.
+   - Usar `useEffect` para executar `dispatch({ type: TaskActionTypes.RESET_STATE })` apenas quando confirmado.
 
-No caso `TaskActionTypes.RESET_STATE`, retornamos `{ ...initialTaskState }` para voltar ao estado padrão (tasks vazias, sem task ativa, etc.).
+## Comportamento esperado
+
+- Clicou na lixeira: abre diálogo com pergunta.
+- Clicou em cancelar: não apaga o histórico.
+- Clicou em confirmar: apaga o histórico.
+- O toast só fecha quando o usuário escolhe uma ação.
+
+## Código-fonte dos arquivos modificados/criados nesta branch
+
+### `src/adapters/showMessage.ts` (modificado)
 
 ```ts
-import type { TaskStateModel } from '../../models/TaskStateModel';
-import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
-import { getNextCycle } from '../../utils/getNextCycle';
-import { initialTaskState } from './initialTaskState';
-import { TaskActionTypes, type TaskActionModel } from './taskActions';
+import { toast } from 'react-toastify';
+import { Dialog } from '../components/Dialog';
 
-export function taskReducer(
-  state: TaskStateModel,
-  action: TaskActionModel,
-): TaskStateModel {
-  switch (action.type) {
-    case TaskActionTypes.START_TASK: {
-      const newTask = action.payload;
-      const nextCycle = getNextCycle(state.currentCycle);
-      const secondsRemaining = newTask.duration * 60;
-
-      return {
-        ...state,
-        activeTask: newTask,
-        currentCycle: nextCycle,
-        secondsRemaining,
-        formattedSecondsRemaining: formatSecondsToMinutes(secondsRemaining),
-        tasks: [...state.tasks, newTask],
-      };
-    }
-    case TaskActionTypes.INTERRUPT_TASK: {
-      return {
-        ...state,
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: '00:00',
-        tasks: state.tasks.map(task => {
-          if (state.activeTask && state.activeTask.id === task.id) {
-            return { ...task, interruptDate: Date.now() };
-          }
-          return task;
-        }),
-      };
-    }
-    case TaskActionTypes.COMPLETE_TASK: {
-      return {
-        ...state,
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: '00:00',
-        tasks: state.tasks.map(task => {
-          if (state.activeTask && state.activeTask.id === task.id) {
-            return { ...task, completeDate: Date.now() };
-          }
-          return task;
-        }),
-      };
-    }
-    case TaskActionTypes.RESET_STATE: {
-      return { ...initialTaskState };
-    }
-    case TaskActionTypes.COUNT_DOWN: {
-      return {
-        ...state,
-        secondsRemaining: action.payload.secondsRemaining,
-        formattedSecondsRemaining: formatSecondsToMinutes(
-          action.payload.secondsRemaining,
-        ),
-      };
-    }
-  }
-
-  // Sempre deve retornar o estado
-  return state;
-}
+export const showMessage = {
+  success: (msg: string) => toast.success(msg),
+  error: (msg: string) => toast.error(msg),
+  warn: (msg: string) => toast.warn(msg),
+  warning: (msg: string) => toast.warning(msg),
+  info: (msg: string) => toast.info(msg),
+  dismiss: () => toast.dismiss(),
+  confirm: (data: string, onClosing: (confirmation: boolean) => void) =>
+    toast(Dialog, {
+      data,
+      onClose: confirmation => {
+        if (confirmation) return onClosing(true);
+        return onClosing(false);
+      },
+      autoClose: false,
+      closeOnClick: false,
+      closeButton: false,
+      draggable: false,
+    }),
+};
 ```
 
----
-
-### 2) History: confirmação, `dispatch`, `useEffect` e UI vazia
-
-Arquivo: `src/pages/History/index.tsx`
-
-Pontos principais:
-
-- `hasTasks = state.tasks.length > 0` para controlar botão, tabela e mensagem.
-- `handleResetHistory`: se `confirm(...)` retornar `false`, sai cedo; senão `dispatch({ type: TaskActionTypes.RESET_STATE })`.
-- `useEffect` com dependência `[state.tasks]`: quando as tasks do contexto mudam, recalcula `sortTasksOptions.tasks` com `sortTasks`, mantendo `direction` e `field` do estado anterior.
-- Botão de lixeira e tabela só renderizam quando `hasTasks`.
-- Parágrafo “Ainda não existem tarefas criadas.” quando `!hasTasks`.
+### `src/pages/History/index.tsx` (modificado)
 
 ```tsx
 import { TrashIcon } from 'lucide-react';
@@ -121,9 +83,11 @@ import { getTaskStatus } from '../../utils/getTaskStatus';
 import { sortTasks, type SortTasksOptions } from '../../utils/sortTasks';
 import { useEffect, useState } from 'react';
 import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
+import { showMessage } from '../../adapters/showMessage';
 
 export function History() {
   const { state, dispatch } = useTaskContext();
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const hasTasks = state.tasks.length > 0;
 
   const [sortTasksOptions, setSortTaskOptions] = useState<SortTasksOptions>(
@@ -147,6 +111,14 @@ export function History() {
     }));
   }, [state.tasks]);
 
+  useEffect(() => {
+    if (!confirmClearHistory) return;
+
+    setConfirmClearHistory(false);
+
+    dispatch({ type: TaskActionTypes.RESET_STATE });
+  }, [confirmClearHistory, dispatch]);
+
   function handleSortTasks({ field }: Pick<SortTasksOptions, 'field'>) {
     const newDirection = sortTasksOptions.direction === 'desc' ? 'asc' : 'desc';
 
@@ -162,9 +134,10 @@ export function History() {
   }
 
   function handleResetHistory() {
-    if (!confirm('Tem certeza')) return;
-
-    dispatch({ type: TaskActionTypes.RESET_STATE });
+    showMessage.dismiss();
+    showMessage.confirm('Tem certeza?', confirmation => {
+      setConfirmClearHistory(confirmation);
+    });
   }
 
   return (
@@ -247,14 +220,75 @@ export function History() {
 }
 ```
 
-**Comportamento do `confirm`:** OK → `true` (executa o `dispatch`); Cancelar → `false` (retorna antes e não apaga).
+### `src/components/Dialog/index.tsx` (criado)
 
----
+```tsx
+import type { ToastContentProps } from 'react-toastify';
+import { DefaultButton } from '../DefaultButton';
+import { ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
 
-### Checklist
+import styles from './styles.module.css';
 
-- [ ] `taskReducer`: `RESET_STATE` retorna `{ ...initialTaskState }`.
-- [ ] `History`: `dispatch` e `TaskActionTypes.RESET_STATE` importados.
-- [ ] `handleResetHistory` com `confirm` antes do `dispatch`.
-- [ ] `useEffect` observando `state.tasks` para sincronizar `sortTasksOptions.tasks`.
-- [ ] `hasTasks` controla tabela, botão de apagar e mensagem de lista vazia.
+export function Dialog({ closeToast, data }: ToastContentProps<string>) {
+  return (
+    <>
+      <div className={styles.container}>
+        <p>{data}</p>
+
+        <div className={styles.buttonsContainer}>
+          <DefaultButton
+            onClick={() => closeToast(true)}
+            icon={<ThumbsUpIcon />}
+            aria-label='Confirmar ação e fechar'
+            title='Confirmar ação e fechar'
+          />
+          <DefaultButton
+            onClick={() => closeToast(false)}
+            icon={<ThumbsDownIcon />}
+            color='red'
+            aria-label='Cancelar ação e fechar'
+            title='Cancelar ação e fechar'
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+```
+
+### `src/components/Dialog/styles.module.css` (criado)
+
+```css
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  text-align: center;
+}
+
+.buttonsContainer {
+  display: flex;
+  gap: 1.6rem;
+}
+
+.buttonsContainer button {
+  min-width: auto;
+  margin: 0;
+}
+
+.buttonsContainer svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+```
+
+## Checklist final
+
+- [ ] Botão de lixeira abre diálogo de confirmação customizado.
+- [ ] Toast não fecha sozinho e não fecha com clique no corpo.
+- [ ] Botão de confirmar envia `true` e apaga o histórico.
+- [ ] Botão de cancelar envia `false` e não apaga nada.
+- [ ] Lógica de confirmação centralizada no adapter (`showMessage.confirm`).
