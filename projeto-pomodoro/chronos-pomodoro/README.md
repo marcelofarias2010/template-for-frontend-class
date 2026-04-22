@@ -1,4 +1,4 @@
-# Prática 80 - Validação de formulário na página Settings
+# Validação de formulário na página Settings
 
 ## Objetivo
 
