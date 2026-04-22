@@ -1,48 +1,236 @@
-# Persistindo configurações no estado global (Context + Reducer)
+# Atualizando o título da aba por página (document.title)
 
 ## Objetivo
 
-Concluir o fluxo da página de configurações para que, após validar o formulário, os novos tempos sejam salvos no estado global da aplicação usando `dispatch`, `taskActions` e `taskReducer`.
+Melhorar a experiência de navegação da aplicação configurando o título da aba do navegador de forma dinâmica em cada página principal.
 
 ## Como esta prática foi definida
 
-Esta instrução foi composta com base nos arquivos modificados da branch:
+Sem transcrição nesta etapa: a prática foi inferida diretamente dos arquivos modificados da branch, que mostram a adição de `useEffect` com `document.title` nas páginas:
 
-- `src/pages/Settings/index.tsx`
-- `src/contexts/TaskContext/taskActions.ts`
-- `src/contexts/TaskContext/taskReducer.ts`
+- `Home`
+- `History`
+- `Settings`
+- `AboutPomodoro`
+- `NotFound`
 
-Com isso, o foco da prática é:
+## O que foi implementado
 
-1. criar a action `CHANGE_SETTINGS`;
-2. tipar corretamente o payload da action;
-3. tratar a action no reducer;
-4. disparar o `dispatch` no submit da página `Settings` após validações;
-5. exibir feedback de sucesso.
+Em cada página, foi adicionado:
 
-## Requisitos da implementação
+1. `import { useEffect } from 'react';`
+2. `useEffect(() => { document.title = '...'; }, []);`
 
-1. Adicionar em `TaskActionTypes` a action `CHANGE_SETTINGS`.
-2. Definir `payload` dessa action com o tipo `TaskStateModel['config']`.
-3. Tratar `CHANGE_SETTINGS` no `taskReducer`, atualizando `state.config`.
-4. Na página `Settings`, usar `dispatch` vindo de `useTaskContext`.
-5. Depois de passar pelas validações:
-   - disparar `dispatch({ type: TaskActionTypes.CHANGE_SETTINGS, payload: { ... } })`;
-   - exibir `showMessage.success('Configurações salvas')`.
-6. Manter os `defaultValue` dos inputs vinculados a `state.config`.
+Com isso, sempre que a página é aberta, o título da aba é atualizado para refletir o conteúdo atual da rota.
+
+## Benefícios
+
+- Melhora usabilidade (o usuário sabe em qual seção está só pela aba).
+- Ajuda em organização quando há várias abas abertas.
+- Prepara terreno para melhorias de SEO e acessibilidade sem dependências extras.
 
 ## Resultado esperado
 
-- Ao enviar valores válidos no formulário de configurações:
-  - o estado global é atualizado;
-  - uma mensagem de sucesso é exibida.
-- Ao enviar valores inválidos:
-  - erros são exibidos;
-  - nenhuma alteração é aplicada no estado global.
+- Home: título da aba exibe `Chronos Pomodoro`.
+- Histórico: título da aba exibe `Histórico - Chronos Pomodoro`.
+- Configurações: título da aba exibe `Configurações - Chronos Pomodoro`.
+- Sobre: título da aba exibe `Entenda a Técnica Pomodoro - Chronos Pomodoro`.
+- 404: título da aba exibe `Página não encontrada - Chronos Pomodoro`.
 
 ---
 
 ## Código-fonte dos arquivos modificados nesta branch
+
+### `src/pages/Home/index.tsx`
+
+```tsx
+import { useEffect } from 'react';
+import { Container } from '../../components/Container';
+import { CountDown } from '../../components/CountDown';
+import { MainForm } from '../../components/MainForm';
+import { MainTemplate } from '../../templates/MainTemplate';
+
+export function Home() {
+  useEffect(() => {
+    document.title = 'Chronos Pomodoro';
+  }, []);
+
+  return (
+    <MainTemplate>
+      <Container>
+        <CountDown />
+      </Container>
+
+      <Container>
+        <MainForm />
+      </Container>
+    </MainTemplate>
+  );
+}
+```
+
+### `src/pages/History/index.tsx`
+
+```tsx
+import { TrashIcon } from 'lucide-react';
+import { Container } from '../../components/Container';
+import { DefaultButton } from '../../components/DefaultButton';
+import { Heading } from '../../components/Heading';
+import { MainTemplate } from '../../templates/MainTemplate';
+
+import styles from './styles.module.css';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { formatDate } from '../../utils/formatDate';
+import { getTaskStatus } from '../../utils/getTaskStatus';
+import { sortTasks, type SortTasksOptions } from '../../utils/sortTasks';
+import { useEffect, useState } from 'react';
+import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
+import { showMessage } from '../../adapters/showMessage';
+
+export function History() {
+  const { state, dispatch } = useTaskContext();
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const hasTasks = state.tasks.length > 0;
+
+  const [sortTasksOptions, setSortTaskOptions] = useState<SortTasksOptions>(
+    () => {
+      return {
+        tasks: sortTasks({ tasks: state.tasks }),
+        field: 'startDate',
+        direction: 'desc',
+      };
+    },
+  );
+
+  useEffect(() => {
+    setSortTaskOptions(prevState => ({
+      ...prevState,
+      tasks: sortTasks({
+        tasks: state.tasks,
+        direction: prevState.direction,
+        field: prevState.field,
+      }),
+    }));
+  }, [state.tasks]);
+
+  useEffect(() => {
+    document.title = 'Histórico - Chronos Pomodoro';
+  }, []);
+
+  useEffect(() => {
+    if (!confirmClearHistory) return;
+
+    setConfirmClearHistory(false);
+
+    dispatch({ type: TaskActionTypes.RESET_STATE });
+  }, [confirmClearHistory, dispatch]);
+
+  useEffect(() => {
+    return () => {
+      showMessage.dismiss();
+    };
+  }, []);
+
+  function handleSortTasks({ field }: Pick<SortTasksOptions, 'field'>) {
+    const newDirection = sortTasksOptions.direction === 'desc' ? 'asc' : 'desc';
+
+    setSortTaskOptions({
+      tasks: sortTasks({
+        direction: newDirection,
+        tasks: sortTasksOptions.tasks,
+        field,
+      }),
+      direction: newDirection,
+      field,
+    });
+  }
+
+  function handleResetHistory() {
+    showMessage.dismiss();
+    showMessage.confirm('Tem certeza?', confirmation => {
+      setConfirmClearHistory(confirmation);
+    });
+  }
+
+  return (
+    <MainTemplate>
+      <Container>
+        <Heading>
+          <span>History</span>
+          {hasTasks && (
+            <span className={styles.buttonContainer}>
+              <DefaultButton
+                icon={<TrashIcon />}
+                color='red'
+                aria-label='Apagar todo o histórico'
+                title='Apagar histórico'
+                onClick={handleResetHistory}
+              />
+            </span>
+          )}
+        </Heading>
+      </Container>
+
+      <Container>
+        {hasTasks && (
+          <div className={styles.responsiveTable}>
+            <table>
+              <thead>
+                <tr>
+                  <th
+                    onClick={() => handleSortTasks({ field: 'name' })}
+                    className={styles.thSort}
+                  >
+                    Tarefa ↕
+                  </th>
+                  <th
+                    onClick={() => handleSortTasks({ field: 'duration' })}
+                    className={styles.thSort}
+                  >
+                    Duração ↕
+                  </th>
+                  <th
+                    onClick={() => handleSortTasks({ field: 'startDate' })}
+                    className={styles.thSort}
+                  >
+                    Data ↕
+                  </th>
+                  <th>Status</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {sortTasksOptions.tasks.map(task => {
+                  const taskTypeDictionary = {
+                    workTime: 'Foco',
+                    shortBreakTime: 'Descanso curto',
+                    longBreakTime: 'Descanso longo',
+                  };
+                  return (
+                    <tr key={task.id}>
+                      <td>{task.name}</td>
+                      <td>{task.duration}min</td>
+                      <td>{formatDate(task.startDate)}</td>
+                      <td>{getTaskStatus(task, state.activeTask)}</td>
+                      <td>{taskTypeDictionary[task.type]}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!hasTasks && (
+          <p style={{ textAlign: 'center', fontWeight: 'bold' }}>
+            Ainda não existem tarefas criadas.
+          </p>
+        )}
+      </Container>
+    </MainTemplate>
+  );
+}
+```
 
 ### `src/pages/Settings/index.tsx`
 
@@ -54,7 +242,7 @@ import { DefaultInput } from '../../components/DefaultInput';
 import { Heading } from '../../components/Heading';
 import { MainTemplate } from '../../templates/MainTemplate';
 import { useTaskContext } from '../../contexts/TaskContext';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { showMessage } from '../../adapters/showMessage';
 import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
 
@@ -63,6 +251,10 @@ export function Settings() {
   const workTimeInput = useRef<HTMLInputElement>(null);
   const shortBreakTimeInput = useRef<HTMLInputElement>(null);
   const longBreakTimeInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    document.title = 'Configurações - Chronos Pomodoro';
+  }, []);
 
   function handleSaveSettings(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -164,137 +356,59 @@ export function Settings() {
 }
 ```
 
-### `src/contexts/TaskContext/taskActions.ts`
+### `src/pages/AboutPomodoro/index.tsx`
 
-```ts
-// useReducer <- hook do React que recebe um reducer e um estado inicial
-// reducer <- função que recebe o estado atual e uma ação, e retorna o novo estado
-// state <- o estado atual
-// action <- a ação disparada, geralmente é um objeto com type e (opcionalmente) payload
-// type <- o tipo da ação, geralmente uma string (pode ser enum, constante, etc)
-// payload <- os dados extras enviados junto com a action, se necessário para atualizar o estado
+```tsx
+import { useEffect } from 'react';
+import { Container } from '../../components/Container';
+import { GenericHtml } from '../../components/GenericHtml';
+import { Heading } from '../../components/Heading';
+import { RouterLink } from '../../components/RouterLink';
+import { MainTemplate } from '../../templates/MainTemplate';
 
-import type { TaskModel } from '../../models/TaskModel';
-import type { TaskStateModel } from '../../models/TaskStateModel';
+export function AboutPomodoro() {
+  useEffect(() => {
+    document.title = 'Entenda a Técnica Pomodoro - Chronos Pomodoro';
+  }, []);
 
-// 1. Trocamos 'enum' por um objeto literal com 'as const'
-export const TaskActionTypes = {
-  START_TASK: 'START_TASK',
-  INTERRUPT_TASK: 'INTERRUPT_TASK',
-  RESET_STATE: 'RESET_STATE',
-  COUNT_DOWN: 'COUNT_DOWN',
-  COMPLETE_TASK: 'COMPLETE_TASK',
-  CHANGE_SETTINGS: 'CHANGE_SETTINGS',
-} as const;
-
-export type TaskActionTypes =
-  (typeof TaskActionTypes)[keyof typeof TaskActionTypes];
-
-export type TaskActionsWithPayload =
-  | {
-    type: typeof TaskActionTypes.START_TASK;
-    payload: TaskModel;
-  }
-  | {
-    type: typeof TaskActionTypes.COUNT_DOWN;
-    payload: { secondsRemaining: number };
-  }
-  | {
-    type: typeof TaskActionTypes.CHANGE_SETTINGS;
-    payload: TaskStateModel['config'];
-  };
-
-export type TaskActionsWithoutPayload =
-  | {
-    type: typeof TaskActionTypes.RESET_STATE;
-  }
-  | {
-    type: typeof TaskActionTypes.INTERRUPT_TASK;
-  }
-  | {
-    type: typeof TaskActionTypes.COMPLETE_TASK;
-  };
-
-export type TaskActionModel =
-  | TaskActionsWithPayload
-  | TaskActionsWithoutPayload;
+  return (
+    <MainTemplate>
+      <Container>
+        <GenericHtml>
+          <Heading>A Técnica Pomodoro 🍅</Heading>
+          {/* ...restante do conteúdo permanece igual... */}
+        </GenericHtml>
+      </Container>
+    </MainTemplate>
+  );
+}
 ```
 
-### `src/contexts/TaskContext/taskReducer.ts`
+### `src/pages/NotFound/index.tsx`
 
-```ts
-import type { TaskStateModel } from '../../models/TaskStateModel';
-import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
-import { getNextCycle } from '../../utils/getNextCycle';
-import { initialTaskState } from './initialTaskState';
-import { TaskActionTypes, type TaskActionModel } from './taskActions';
+```tsx
+import { useEffect } from 'react';
+import { Container } from '../../components/Container';
+import { GenericHtml } from '../../components/GenericHtml';
+import { Heading } from '../../components/Heading';
+import { RouterLink } from '../../components/RouterLink';
+import { MainTemplate } from '../../templates/MainTemplate';
 
-export function taskReducer(
-  state: TaskStateModel,
-  action: TaskActionModel,
-): TaskStateModel {
-  switch (action.type) {
-    case TaskActionTypes.START_TASK: {
-      const newTask = action.payload;
-      const nextCycle = getNextCycle(state.currentCycle);
-      const secondsRemaining = newTask.duration * 60;
+export function NotFound() {
+  useEffect(() => {
+    document.title = 'Página não encontrada - Chronos Pomodoro';
+  }, []);
 
-      return {
-        ...state,
-        activeTask: newTask,
-        currentCycle: nextCycle,
-        secondsRemaining,
-        formattedSecondsRemaining: formatSecondsToMinutes(secondsRemaining),
-        tasks: [...state.tasks, newTask],
-      };
-    }
-    case TaskActionTypes.INTERRUPT_TASK: {
-      return {
-        ...state,
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: '00:00',
-        tasks: state.tasks.map(task => {
-          if (state.activeTask && state.activeTask.id === task.id) {
-            return { ...task, interruptDate: Date.now() };
-          }
-          return task;
-        }),
-      };
-    }
-    case TaskActionTypes.COMPLETE_TASK: {
-      return {
-        ...state,
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: '00:00',
-        tasks: state.tasks.map(task => {
-          if (state.activeTask && state.activeTask.id === task.id) {
-            return { ...task, completeDate: Date.now() };
-          }
-          return task;
-        }),
-      };
-    }
-    case TaskActionTypes.RESET_STATE: {
-      return { ...initialTaskState };
-    }
-    case TaskActionTypes.COUNT_DOWN: {
-      return {
-        ...state,
-        secondsRemaining: action.payload.secondsRemaining,
-        formattedSecondsRemaining: formatSecondsToMinutes(
-          action.payload.secondsRemaining,
-        ),
-      };
-    }
-    case TaskActionTypes.CHANGE_SETTINGS: {
-      return { ...state, config: { ...action.payload } };
-    }
-  }
-
-  // Sempre deve retornar o estado
-  return state;
+  return (
+    <MainTemplate>
+      <Container>
+        <GenericHtml>
+          <Heading>404 - Página não encontrada 🚀</Heading>
+          {/* ...restante do conteúdo permanece igual... */}
+        </GenericHtml>
+      </Container>
+    </MainTemplate>
+  );
 }
 ```
 
@@ -302,8 +416,7 @@ export function taskReducer(
 
 ## Checklist
 
-- [ ] Action `CHANGE_SETTINGS` criada e tipada.
-- [ ] Reducer atualiza `state.config` no case `CHANGE_SETTINGS`.
-- [ ] Página `Settings` dispara `dispatch` com payload válido.
-- [ ] Erros de validação impedem o dispatch.
-- [ ] Mensagem de sucesso exibida após salvar.
+- [ ] Cada página principal define seu próprio `document.title`.
+- [ ] `useEffect` usa dependências vazias (`[]`) para rodar no carregamento da página.
+- [ ] Os títulos seguem um padrão consistente com `Chronos Pomodoro`.
+- [ ] Navegar entre rotas atualiza corretamente o texto da aba.
