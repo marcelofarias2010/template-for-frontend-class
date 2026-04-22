@@ -1,43 +1,48 @@
-# Validação de formulário na página Settings
+# Persistindo configurações no estado global (Context + Reducer)
 
 ## Objetivo
 
-Implementar a validação dos campos de configuração (foco, descanso curto e descanso longo) antes de salvar os dados no estado global.
+Concluir o fluxo da página de configurações para que, após validar o formulário, os novos tempos sejam salvos no estado global da aplicação usando `dispatch`, `taskActions` e `taskReducer`.
 
-Nesta prática, o foco é:
+## Como esta prática foi definida
 
-- validar os dados no JavaScript (React);
-- acumular e exibir todos os erros de uma vez;
-- restringir os inputs para número com `type='number'`;
-- preparar o fluxo para, na próxima aula, disparar action/reducer para salvar no contexto.
+Esta instrução foi composta com base nos arquivos modificados da branch:
 
-## Contexto da aula
+- `src/pages/Settings/index.tsx`
+- `src/contexts/TaskContext/taskActions.ts`
+- `src/contexts/TaskContext/taskReducer.ts`
 
-Com o submit já funcionando, agora precisamos garantir que os valores informados são válidos.
+Com isso, o foco da prática é:
 
-A abordagem escolhida foi:
+1. criar a action `CHANGE_SETTINGS`;
+2. tipar corretamente o payload da action;
+3. tratar a action no reducer;
+4. disparar o `dispatch` no submit da página `Settings` após validações;
+5. exibir feedback de sucesso.
 
-1. limpar mensagens antigas (`showMessage.dismiss()`),
-2. ler os valores via `useRef`,
-3. converter para número com `Number(...)`,
-4. validar e adicionar mensagens no array `formErrors`,
-5. exibir todos os erros com `showMessage.error(...)`,
-6. interromper com `return` se houver erro.
+## Requisitos da implementação
 
-## Regras de validação aplicadas
-
-- Todos os campos devem ser numéricos.
-- `workTime` (Foco): mínimo **1**, máximo **99**.
-- `shortBreakTime` (Descanso curto): mínimo **1**, máximo **30**.
-- `longBreakTime` (Descanso longo): mínimo **1**, máximo **60**.
+1. Adicionar em `TaskActionTypes` a action `CHANGE_SETTINGS`.
+2. Definir `payload` dessa action com o tipo `TaskStateModel['config']`.
+3. Tratar `CHANGE_SETTINGS` no `taskReducer`, atualizando `state.config`.
+4. Na página `Settings`, usar `dispatch` vindo de `useTaskContext`.
+5. Depois de passar pelas validações:
+   - disparar `dispatch({ type: TaskActionTypes.CHANGE_SETTINGS, payload: { ... } })`;
+   - exibir `showMessage.success('Configurações salvas')`.
+6. Manter os `defaultValue` dos inputs vinculados a `state.config`.
 
 ## Resultado esperado
 
-- Se qualquer campo estiver inválido, o usuário recebe mensagem de erro e o formulário não prossegue.
-- Se os três valores estiverem corretos, o fluxo chega no ponto de salvar (`console.log('SALVAR')`), que será substituído pela atualização real do estado na próxima prática.
-- Os inputs passam a ser numéricos no HTML (`type='number'`), mas a validação principal continua no JavaScript.
+- Ao enviar valores válidos no formulário de configurações:
+  - o estado global é atualizado;
+  - uma mensagem de sucesso é exibida.
+- Ao enviar valores inválidos:
+  - erros são exibidos;
+  - nenhuma alteração é aplicada no estado global.
 
-## Código-fonte do arquivo modificado nesta branch
+---
+
+## Código-fonte dos arquivos modificados nesta branch
 
 ### `src/pages/Settings/index.tsx`
 
@@ -51,9 +56,10 @@ import { MainTemplate } from '../../templates/MainTemplate';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useRef } from 'react';
 import { showMessage } from '../../adapters/showMessage';
+import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
 
 export function Settings() {
-  const { state } = useTaskContext();
+  const { state, dispatch } = useTaskContext();
   const workTimeInput = useRef<HTMLInputElement>(null);
   const shortBreakTimeInput = useRef<HTMLInputElement>(null);
   const longBreakTimeInput = useRef<HTMLInputElement>(null);
@@ -91,7 +97,15 @@ export function Settings() {
       return;
     }
 
-    console.log('SALVAR');
+    dispatch({
+      type: TaskActionTypes.CHANGE_SETTINGS,
+      payload: {
+        workTime,
+        shortBreakTime,
+        longBreakTime,
+      },
+    });
+    showMessage.success('Configurações salvas');
   }
 
   return (
@@ -150,13 +164,146 @@ export function Settings() {
 }
 ```
 
+### `src/contexts/TaskContext/taskActions.ts`
+
+```ts
+// useReducer <- hook do React que recebe um reducer e um estado inicial
+// reducer <- função que recebe o estado atual e uma ação, e retorna o novo estado
+// state <- o estado atual
+// action <- a ação disparada, geralmente é um objeto com type e (opcionalmente) payload
+// type <- o tipo da ação, geralmente uma string (pode ser enum, constante, etc)
+// payload <- os dados extras enviados junto com a action, se necessário para atualizar o estado
+
+import type { TaskModel } from '../../models/TaskModel';
+import type { TaskStateModel } from '../../models/TaskStateModel';
+
+// 1. Trocamos 'enum' por um objeto literal com 'as const'
+export const TaskActionTypes = {
+  START_TASK: 'START_TASK',
+  INTERRUPT_TASK: 'INTERRUPT_TASK',
+  RESET_STATE: 'RESET_STATE',
+  COUNT_DOWN: 'COUNT_DOWN',
+  COMPLETE_TASK: 'COMPLETE_TASK',
+  CHANGE_SETTINGS: 'CHANGE_SETTINGS',
+} as const;
+
+export type TaskActionTypes =
+  (typeof TaskActionTypes)[keyof typeof TaskActionTypes];
+
+export type TaskActionsWithPayload =
+  | {
+    type: typeof TaskActionTypes.START_TASK;
+    payload: TaskModel;
+  }
+  | {
+    type: typeof TaskActionTypes.COUNT_DOWN;
+    payload: { secondsRemaining: number };
+  }
+  | {
+    type: typeof TaskActionTypes.CHANGE_SETTINGS;
+    payload: TaskStateModel['config'];
+  };
+
+export type TaskActionsWithoutPayload =
+  | {
+    type: typeof TaskActionTypes.RESET_STATE;
+  }
+  | {
+    type: typeof TaskActionTypes.INTERRUPT_TASK;
+  }
+  | {
+    type: typeof TaskActionTypes.COMPLETE_TASK;
+  };
+
+export type TaskActionModel =
+  | TaskActionsWithPayload
+  | TaskActionsWithoutPayload;
+```
+
+### `src/contexts/TaskContext/taskReducer.ts`
+
+```ts
+import type { TaskStateModel } from '../../models/TaskStateModel';
+import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
+import { getNextCycle } from '../../utils/getNextCycle';
+import { initialTaskState } from './initialTaskState';
+import { TaskActionTypes, type TaskActionModel } from './taskActions';
+
+export function taskReducer(
+  state: TaskStateModel,
+  action: TaskActionModel,
+): TaskStateModel {
+  switch (action.type) {
+    case TaskActionTypes.START_TASK: {
+      const newTask = action.payload;
+      const nextCycle = getNextCycle(state.currentCycle);
+      const secondsRemaining = newTask.duration * 60;
+
+      return {
+        ...state,
+        activeTask: newTask,
+        currentCycle: nextCycle,
+        secondsRemaining,
+        formattedSecondsRemaining: formatSecondsToMinutes(secondsRemaining),
+        tasks: [...state.tasks, newTask],
+      };
+    }
+    case TaskActionTypes.INTERRUPT_TASK: {
+      return {
+        ...state,
+        activeTask: null,
+        secondsRemaining: 0,
+        formattedSecondsRemaining: '00:00',
+        tasks: state.tasks.map(task => {
+          if (state.activeTask && state.activeTask.id === task.id) {
+            return { ...task, interruptDate: Date.now() };
+          }
+          return task;
+        }),
+      };
+    }
+    case TaskActionTypes.COMPLETE_TASK: {
+      return {
+        ...state,
+        activeTask: null,
+        secondsRemaining: 0,
+        formattedSecondsRemaining: '00:00',
+        tasks: state.tasks.map(task => {
+          if (state.activeTask && state.activeTask.id === task.id) {
+            return { ...task, completeDate: Date.now() };
+          }
+          return task;
+        }),
+      };
+    }
+    case TaskActionTypes.RESET_STATE: {
+      return { ...initialTaskState };
+    }
+    case TaskActionTypes.COUNT_DOWN: {
+      return {
+        ...state,
+        secondsRemaining: action.payload.secondsRemaining,
+        formattedSecondsRemaining: formatSecondsToMinutes(
+          action.payload.secondsRemaining,
+        ),
+      };
+    }
+    case TaskActionTypes.CHANGE_SETTINGS: {
+      return { ...state, config: { ...action.payload } };
+    }
+  }
+
+  // Sempre deve retornar o estado
+  return state;
+}
+```
+
+---
+
 ## Checklist
 
-- [ ] Formulário impede reload (`preventDefault`).
-- [ ] Mensagens antigas são limpas antes de validar (`showMessage.dismiss()`).
-- [ ] Valores convertidos com `Number(...)`.
-- [ ] Validação numérica geral com `isNaN`.
-- [ ] Validação de faixas por campo (foco, descanso curto e descanso longo).
-- [ ] Exibição de erros acumulados com `formErrors.forEach(...)`.
-- [ ] Inputs usando `type='number'`.
-- [ ] Fluxo de sucesso chegando no ponto de salvar.
+- [ ] Action `CHANGE_SETTINGS` criada e tipada.
+- [ ] Reducer atualiza `state.config` no case `CHANGE_SETTINGS`.
+- [ ] Página `Settings` dispara `dispatch` com payload válido.
+- [ ] Erros de validação impedem o dispatch.
+- [ ] Mensagem de sucesso exibida após salvar.
