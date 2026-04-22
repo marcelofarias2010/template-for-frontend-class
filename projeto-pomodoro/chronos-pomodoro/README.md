@@ -1,73 +1,42 @@
-# Confirmação customizada com React-Toastify
+# Correção de bug ao sair da tela de histórico
 
 ## Objetivo
 
-Substituir o `window.confirm` por um diálogo visual customizado com `react-toastify`, mantendo o fluxo de confirmação para apagar o histórico.
+Corrigir o bug em que o toast de confirmação continua visível ao sair da página `History`, causando comportamento inconsistente quando o usuário tenta confirmar a ação fora da tela de histórico.
 
-## Contexto da aula
+## Cenário do bug
 
-Nesta prática, vamos:
+Durante os testes, foi identificado o seguinte comportamento:
 
-- Exibir um toast de confirmação que **não fecha sozinho**.
-- Renderizar um **componente React** dentro do toast.
-- Capturar a decisão do usuário (`true` para confirmar, `false` para cancelar).
-- Encapsular a lógica no adapter `showMessage.confirm(...)` para evitar repetição.
-- Aplicar esse fluxo na tela de histórico antes de disparar `RESET_STATE`.
+1. O usuário abre a confirmação para apagar histórico.
+2. Sai da página `History` sem clicar em confirmar/cancelar.
+3. O toast continua na tela.
+4. Se clicar em confirmar fora da página `History`, a lógica baseada no estado local da página pode não executar como esperado, pois o componente já foi desmontado.
 
-## Requisitos da implementação
+## Estratégia aplicada nesta prática
 
-1. Criar o componente `Dialog` em `src/components/Dialog/index.tsx`.
-2. Estilizar o componente com `src/components/Dialog/styles.module.css`.
-3. Adicionar no adapter `showMessage` o método:
-   - `confirm(data: string, onClosing: (confirmation: boolean) => void)`
-4. Configurar o toast de confirmação com:
-   - `autoClose: false`
-   - `closeOnClick: false`
-   - `closeButton: false`
-   - `draggable: false`
-5. Na página `History`:
-   - Trocar confirmação antiga por `showMessage.confirm(...)`.
-   - Salvar o retorno da confirmação no estado.
-   - Usar `useEffect` para executar `dispatch({ type: TaskActionTypes.RESET_STATE })` apenas quando confirmado.
+Utilizar o **cleanup do `useEffect`** no componente `History` para remover qualquer toast ativo quando a página for desmontada.
 
-## Comportamento esperado
+### Implementação
 
-- Clicou na lixeira: abre diálogo com pergunta.
-- Clicou em cancelar: não apaga o histórico.
-- Clicou em confirmar: apaga o histórico.
-- O toast só fecha quando o usuário escolhe uma ação.
+- Adicionar um `useEffect` com array de dependências vazio (`[]`).
+- No `return` desse efeito (função de cleanup), chamar `showMessage.dismiss()`.
 
-## Código-fonte dos arquivos modificados/criados nesta branch
+Com isso:
 
-### `src/adapters/showMessage.ts` (modificado)
+- Ao navegar para fora de `History`, os toasts são fechados automaticamente.
+- O usuário não fica com confirmação “pendurada” na UI.
+- Evitamos ação de confirmação fora do contexto da página.
 
-```ts
-import { toast } from 'react-toastify';
-import { Dialog } from '../components/Dialog';
+## Resultado esperado
 
-export const showMessage = {
-  success: (msg: string) => toast.success(msg),
-  error: (msg: string) => toast.error(msg),
-  warn: (msg: string) => toast.warn(msg),
-  warning: (msg: string) => toast.warning(msg),
-  info: (msg: string) => toast.info(msg),
-  dismiss: () => toast.dismiss(),
-  confirm: (data: string, onClosing: (confirmation: boolean) => void) =>
-    toast(Dialog, {
-      data,
-      onClose: confirmation => {
-        if (confirmation) return onClosing(true);
-        return onClosing(false);
-      },
-      autoClose: false,
-      closeOnClick: false,
-      closeButton: false,
-      draggable: false,
-    }),
-};
-```
+- Se abrir o diálogo de confirmação e sair da página `History`, o diálogo deve desaparecer.
+- Não deve ser possível confirmar uma ação de limpar histórico fora da tela de histórico.
+- O fluxo de confirmação/cancelamento continua funcionando normalmente dentro da página.
 
-### `src/pages/History/index.tsx` (modificado)
+## Arquivo modificado nesta branch
+
+### `src/pages/History/index.tsx`
 
 ```tsx
 import { TrashIcon } from 'lucide-react';
@@ -118,6 +87,12 @@ export function History() {
 
     dispatch({ type: TaskActionTypes.RESET_STATE });
   }, [confirmClearHistory, dispatch]);
+
+  useEffect(() => {
+    return () => {
+      showMessage.dismiss();
+    };
+  }, []);
 
   function handleSortTasks({ field }: Pick<SortTasksOptions, 'field'>) {
     const newDirection = sortTasksOptions.direction === 'desc' ? 'asc' : 'desc';
@@ -220,75 +195,9 @@ export function History() {
 }
 ```
 
-### `src/components/Dialog/index.tsx` (criado)
+## Checklist
 
-```tsx
-import type { ToastContentProps } from 'react-toastify';
-import { DefaultButton } from '../DefaultButton';
-import { ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
-
-import styles from './styles.module.css';
-
-export function Dialog({ closeToast, data }: ToastContentProps<string>) {
-  return (
-    <>
-      <div className={styles.container}>
-        <p>{data}</p>
-
-        <div className={styles.buttonsContainer}>
-          <DefaultButton
-            onClick={() => closeToast(true)}
-            icon={<ThumbsUpIcon />}
-            aria-label='Confirmar ação e fechar'
-            title='Confirmar ação e fechar'
-          />
-          <DefaultButton
-            onClick={() => closeToast(false)}
-            icon={<ThumbsDownIcon />}
-            color='red'
-            aria-label='Cancelar ação e fechar'
-            title='Cancelar ação e fechar'
-          />
-        </div>
-      </div>
-    </>
-  );
-}
-```
-
-### `src/components/Dialog/styles.module.css` (criado)
-
-```css
-.container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 1.6rem;
-  text-align: center;
-}
-
-.buttonsContainer {
-  display: flex;
-  gap: 1.6rem;
-}
-
-.buttonsContainer button {
-  min-width: auto;
-  margin: 0;
-}
-
-.buttonsContainer svg {
-  width: 1.6rem;
-  height: 1.6rem;
-}
-```
-
-## Checklist final
-
-- [ ] Botão de lixeira abre diálogo de confirmação customizado.
-- [ ] Toast não fecha sozinho e não fecha com clique no corpo.
-- [ ] Botão de confirmar envia `true` e apaga o histórico.
-- [ ] Botão de cancelar envia `false` e não apaga nada.
-- [ ] Lógica de confirmação centralizada no adapter (`showMessage.confirm`).
+- [ ] Ao abrir confirmação e sair da tela, o toast é removido automaticamente.
+- [ ] Confirmar/cancelar dentro da tela `History` continua funcionando.
+- [ ] Não há toast “preso” ao navegar para outras rotas.
+- [ ] O histórico só é apagado quando a confirmação for positiva.
