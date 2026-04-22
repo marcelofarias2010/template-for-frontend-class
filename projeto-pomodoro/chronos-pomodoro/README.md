@@ -1,4 +1,4 @@
-# Prática 78 - Criando a estrutura da página de configurações
+# Criando a estrutura da página de configurações
 
 ## Objetivo
 
