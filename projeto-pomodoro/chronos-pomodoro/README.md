@@ -22,8 +22,8 @@ algoritmo "FizzBuzz"!
 
 ## 🛠️ 1. Criando a Função Utilitária (`getNextCycleType.ts`)
 
-Vamos criar mais um arquivo na nossa pasta `utils`. Dessa vez, além de receber o
-número do ciclo, vamos usar o TypeScript para garantir que o retorno seja
+Vamos criar mais dois arquivo na nossa pasta `utils`. Dessa vez, além de receber
+o número do ciclo, vamos usar o TypeScript para garantir que o retorno seja
 exatamente um dos três tipos válidos do nosso `TaskModel`.
 
 **Arquivo:** `src/utils/getNextCycleType.ts`
@@ -41,6 +41,14 @@ export function getNextCycleType(currentCycle: number): TaskModel['type'] {
 
   // 3. Se não caiu em nenhuma das regras acima, só pode ser Ímpar (Tempo de Foco)
   return 'workTime';
+}
+```
+
+**Arquivo:** `src/utils/getNextCycle.ts`
+
+```ts
+export function getNextCycle(currentCycle: number) {
+  return currentCycle === 0 || currentCycle === 8 ? 1 : currentCycle + 1;
 }
 ```
 
