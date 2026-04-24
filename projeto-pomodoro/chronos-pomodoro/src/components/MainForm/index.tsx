@@ -4,7 +4,7 @@ import { DefaultButton } from '../DefaultButton';
 import { DefaultInput } from '../DefaultInput';
 import { useRef } from 'react';
 import type { TaskModel } from '../../models/TaskModel';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext } from '../../contexts/TaskContext/useTaskContext';
 import { getNextCycle } from '../../utils/getNextCycle';
 import { getNextCycleType } from '../../utils/getNextCycleType';
 import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
@@ -55,15 +55,6 @@ export function MainForm() {
     });
   }
 
-  function handleClick() {
-    setState(prevState => {
-      return {
-        ...prevState,
-        formattedSecondsRemaining: '21:00',
-      };
-    });
-  }
-
   function handleInterruptTask() {
     setState(prevState => {
       return {
@@ -76,9 +67,7 @@ export function MainForm() {
   }
   return (
     <form onSubmit={handleCreateNewTask} className='form' action=''>
-      <button onClick={handleClick} type='button'>
-        Clicar
-      </button>
+
       <div className='formRow'>
         <DefaultInput
           labelText='task'
