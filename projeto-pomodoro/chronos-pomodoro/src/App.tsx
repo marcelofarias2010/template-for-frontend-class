@@ -1,7 +1,7 @@
 import { Home } from './pages/Home';
 import './styles/theme.css';
 import './styles/global.css';
-import { TaskContextProvider } from './contexts/TaskContext';
+import { TaskContextProvider } from './contexts/TaskContext/TaskContextProvider';
 import { MessagesContainer } from './components/MessagesContainer';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { NotFound } from './pages/NotFound';
