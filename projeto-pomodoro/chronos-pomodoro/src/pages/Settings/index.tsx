@@ -4,7 +4,7 @@ import { DefaultButton } from '../../components/DefaultButton';
 import { DefaultInput } from '../../components/DefaultInput';
 import { Heading } from '../../components/Heading';
 import { MainTemplate } from '../../templates/MainTemplate';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext } from '../../contexts/TaskContext/useTaskContext';
 import { useRef } from 'react';
 
 export function Settings() {
