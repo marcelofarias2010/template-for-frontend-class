@@ -1,60 +1,49 @@
-# ⌨️ Capturando Dados: O Padrão de Inputs Controlados
+# Prática - Capturando o `submit` do formulário no `MainForm`
 
-Vamos explorar a forma mais clássica e poderosa de lidar com inputs no React: os
-Controlled Components (Componentes Controlados)!
+## Objetivo
 
-Na aula passada, nós conseguimos interceptar o envio do formulário, mas ainda
-não sabemos o que o usuário digitou. Nesta aula, vamos aprender a técnica mais
-comum no React para ler o valor de um campo de texto: o **Input Controlado**
-(_Controlled Component_).
+Nesta etapa, o foco é **simples e direto**: capturar o envio do formulário da
+task e impedir o comportamento padrão do navegador (recarregar a página).
 
----
-
-## 🎭 O que é um Input Controlado?
-
-No HTML tradicional, o próprio `<input>` guarda o que você digita nele. No
-React, nós gostamos de ter o controle de tudo. Um Input Controlado é aquele em
-que o React (através de um estado) é a "única fonte da verdade".
-
-Para transformar um input comum em um input controlado, precisamos de duas
-coisas:
-
-1. Uma propriedade `value` atrelada a uma variável de estado.
-2. Um evento `onChange` que atualiza esse estado a cada tecla digitada.
-
-Se você colocar apenas o `value` sem o `onChange`, o React vai travar o seu
-input e você não conseguirá digitar nada nele!
+Ainda **não** vamos pegar valor do input nesta aula. Isso fica para a próxima.
 
 ---
 
-## 🛠️ Implementando o Input Controlado (`MainForm.tsx`)
+## O que será feito
 
-Vamos criar um estado chamado `taskName` e conectá-lo ao nosso
-`<DefaultInput />`.
+- Adicionar `onSubmit` no `<form>`.
+- Criar a função `handleCreateNewTask`.
+- Tipar o evento como `React.FormEvent<HTMLFormElement>`.
+- Executar `event.preventDefault()`.
+- Confirmar no console com `console.log('DEU CERTO')`.
 
-**Arquivo:** `src/components/MainForm/index.tsx`
+---
+
+## Por que isso é importante?
+
+Quando um formulário é enviado no HTML puro, o navegador faz refresh da página.
+Em aplicações React, isso quebra a experiência e perde estado em memória.
+
+Com `preventDefault()`, o fluxo passa a ser controlado pelo React e conseguimos
+seguir com validações e lógica da aplicação sem recarregar.
+
+---
+
+## Código da etapa
+
+Arquivo: `src/components/MainForm/index.tsx`
 
 ```tsx
 import { PlayCircleIcon } from 'lucide-react';
 import { Cycles } from '../Cycles';
 import { DefaultButton } from '../DefaultButton';
 import { DefaultInput } from '../DefaultInput';
-import { useTaskContext } from '../../contexts/useTaskContext';
-
-// 1. Importe o useState
-import { useState } from 'react';
 
 export function MainForm() {
-  const { setState } = useTaskContext();
-
-  // 2. Crie o estado para guardar o que o usuário digita
-  const [taskName, setTaskName] = useState('');
-
   function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // 5. Agora podemos ver o valor exato no momento do envio!
-    console.log('DEU CERTO', taskName);
+    console.log('DEU CERTO');
   }
 
   return (
@@ -65,10 +54,6 @@ export function MainForm() {
           id='meuInput'
           type='text'
           placeholder='Digite algo'
-          // 3. Forçamos o input a exibir o que está no estado
-          value={taskName}
-          // 4. A cada tecla (e.target.value), atualizamos o estado
-          onChange={e => setTaskName(e.target.value)}
         />
       </div>
 
@@ -88,31 +73,19 @@ export function MainForm() {
 }
 ```
 
-## 🕵️‍♂️ Como a Mágica Acontece (Passo a Passo)
+---
 
-1. O usuário aperta a tecla "A".
-2. O evento `onChange` é disparado. Ele captura a letra "A" (através de
-   `e.target.value`).
-3. A função `setTaskName('A')` é chamada.
-4. O React percebe que o estado mudou e re-renderiza o componente
-   `<MainForm />`.
-5. O componente desenha o input novamente, mas agora passando `value={'A'}`.
-6. A letra "A" aparece na tela.
+## Checklist
 
-Tudo isso acontece em milissegundos **para cada** tecla que você digita!
+- [ ] O formulário possui `onSubmit={handleCreateNewTask}`.
+- [ ] A função recebe o evento tipado `React.FormEvent<HTMLFormElement>`.
+- [ ] Existe `event.preventDefault()` no início da função.
+- [ ] Ao clicar no botão, aparece `DEU CERTO` no console.
+- [ ] A página não recarrega ao enviar o formulário.
 
-## ⚠️ Um Alerta (Mas não precisa surtar!)
+---
 
-Como vimos no passo a passo acima, um input controlado faz o componente ser
-renderizado novamente a cada única tecla digitada.
+## Próxima aula
 
-**Isso vai deixar meu site lento?** Na imensa maioria das vezes: **NÃO**. Para
-formulários normais (tela de login, cadastro, pomodoro, etc.), os navegadores
-modernos lidam com essas renderizações com as mãos amarradas nas costas.
-
-No entanto, se você estiver construindo um formulário absurdamente gigante (ex:
-uma planilha com 100 campos na mesma tela), essa técnica pode causar lentidão.
-
-Para esses casos raros (e também para conhecermos outras ferramentas do React),
-existe uma segunda forma de capturar dados de inputs sem causar
-re-renderizações. É a técnica dos Inputs Não-Controlados usando Refs.
+Agora que o submit está controlado, o próximo passo é capturar e tratar o valor
+do input da task.
