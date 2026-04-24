@@ -4,7 +4,7 @@ import { DefaultButton } from '../DefaultButton';
 import { DefaultInput } from '../DefaultInput';
 import { useRef } from 'react';
 import type { TaskModel } from '../../models/TaskModel';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext } from '../../contexts/TaskContext/useTaskContext';
 import { getNextCycle } from '../../utils/getNextCycle';
 import { getNextCycleType } from '../../utils/getNextCycleType';
 import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
@@ -55,15 +55,6 @@ export function MainForm() {
     });
   }
 
-  function handleClick() {
-    setState(prevState => {
-      return {
-        ...prevState,
-        formattedSecondsRemaining: '21:00',
-      };
-    });
-  }
-
   function handleInterruptTask() {
     setState(prevState => {
       return {
@@ -71,20 +62,12 @@ export function MainForm() {
         activeTask: null,
         secondsRemaining: 0,
         formattedSecondsRemaining: '00:00',
-        tasks: prevState.tasks.map(task => {
-          if (prevState.activeTask && prevState.activeTask.id === task.id) {
-            return { ...task, interruptDate: Date.now() };
-          }
-          return task;
-        }),
       };
     });
   }
   return (
     <form onSubmit={handleCreateNewTask} className='form' action=''>
-      <button onClick={handleClick} type='button'>
-        Clicar
-      </button>
+
       <div className='formRow'>
         <DefaultInput
           labelText='task'
@@ -113,6 +96,7 @@ export function MainForm() {
             title='Iniciar nova tarefa'
             type='submit'
             icon={<PlayCircleIcon />}
+            key='botao_submit'
           />
         )}
 
