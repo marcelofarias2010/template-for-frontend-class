@@ -10,13 +10,14 @@ import { getNextCycleType } from '../../utils/getNextCycleType';
 import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
 import { Tips } from '../Tips';
 import { showMessage } from '../../adapters/showMessage';
+import { createTask, interruptTask } from '../../services/api';
 
 export function MainForm() {
   const { state, dispatch } = useTaskContext();
   const taskNameInput = useRef<HTMLInputElement>(null);
   const lastTaskName = state.tasks[state.tasks.length - 1]?.name || '';
 
-  function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     showMessage.dismiss();
 
@@ -44,12 +45,28 @@ export function MainForm() {
 
     dispatch({ type: TaskActionTypes.START_TASK, payload: newTask });
     showMessage.success('Tarefa iniciada');
+
+    try {
+      await createTask(newTask);
+    } catch {
+      showMessage.error('A tarefa iniciou, mas não foi persistida na API');
+    }
   }
 
-  function handleInterruptTask() {
+  async function handleInterruptTask() {
     showMessage.dismiss();
     showMessage.error('Tarefa interrompida!');
+    const taskId = state.activeTask?.id;
+    const interruptDate = Date.now();
     dispatch({ type: TaskActionTypes.INTERRUPT_TASK });
+
+    if (!taskId) return;
+
+    try {
+      await interruptTask(taskId, interruptDate);
+    } catch {
+      showMessage.error('A tarefa foi interrompida localmente, mas a API falhou');
+    }
   }
 
   return (

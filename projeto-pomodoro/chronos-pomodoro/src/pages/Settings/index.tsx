@@ -8,6 +8,7 @@ import { useTaskContext } from '../../contexts/TaskContext/useTaskContext';
 import { useEffect, useRef } from 'react';
 import { showMessage } from '../../adapters/showMessage';
 import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
+import { updateSettings } from '../../services/api';
 
 export function Settings() {
   const { state, dispatch } = useTaskContext();
@@ -20,7 +21,7 @@ export function Settings() {
   }, []);
 
 
-  function handleSaveSettings(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSaveSettings(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     showMessage.dismiss();
 
@@ -53,15 +54,22 @@ export function Settings() {
       return;
     }
 
-    dispatch({
-      type: TaskActionTypes.CHANGE_SETTINGS,
-      payload: {
-        workTime,
-        shortBreakTime,
-        longBreakTime,
-      },
-    });
-    showMessage.success('Configurações salvas');
+    const nextConfig = {
+      workTime,
+      shortBreakTime,
+      longBreakTime,
+    };
+
+    try {
+      await updateSettings(nextConfig);
+      dispatch({
+        type: TaskActionTypes.CHANGE_SETTINGS,
+        payload: nextConfig,
+      });
+      showMessage.success('Configurações salvas');
+    } catch {
+      showMessage.error('Não foi possível salvar as configurações na API');
+    }
   }
 
   return (
