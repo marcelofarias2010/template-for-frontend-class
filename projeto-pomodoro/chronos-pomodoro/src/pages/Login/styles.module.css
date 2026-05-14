@@ -1,0 +1,279 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+/* ─── Reset / Base ───────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+/* ─── Layout ─────────────────────────────────────────────────────── */
+.wrap {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #0f0f0f;
+  font-family: 'Syne', sans-serif;
+}
+
+/* Left decorative panel */
+.wrap::before {
+  content: '';
+  display: block;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200, 0, 0, 0.22) 0%, transparent 70%),
+    linear-gradient(180deg, #0f0f0f 0%, #1a0000 60%, #0f0f0f 100%);
+  position: relative;
+}
+
+/* Vertical text stamp on left panel */
+.wrap::after {
+  content: 'LOGIN';
+  position: fixed;
+  left: calc(25% - 1.5rem);
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(4rem, 8vw, 7rem);
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  color: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(2rem, 5vw, 4.5rem);
+  background: #0f0f0f;
+  position: relative;
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Top red accent line */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: clamp(2rem, 5vw, 4.5rem);
+  right: clamp(2rem, 5vw, 4.5rem);
+  height: 2px;
+  background: linear-gradient(90deg, #e31c1c 0%, transparent 100%);
+}
+
+/* ─── Typography ─────────────────────────────────────────────────── */
+.title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  color: #f5f5f5;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.title::after {
+  content: '.';
+  color: #e31c1c;
+}
+
+.subtitle {
+  font-family: 'Syne', sans-serif;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: #5a5a5a;
+  margin: 0 0 2.75rem;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Fields ─────────────────────────────────────────────────────── */
+.field {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.field label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #5a5a5a;
+  margin-bottom: 8px;
+}
+
+.field input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid #2a2a2a;
+  border-radius: 0;
+  color: #f5f5f5;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  padding: 8px 0 10px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  caret-color: #e31c1c;
+}
+
+.field input::placeholder {
+  color: #3a3a3a;
+}
+
+.field input:focus {
+  border-bottom-color: #e31c1c;
+  box-shadow: none;
+}
+
+/* Red underline grow animation on focus */
+.field::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: #e31c1c;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.field:focus-within::after {
+  width: 100%;
+}
+
+/* ─── Primary Button ─────────────────────────────────────────────── */
+.btnPrimary {
+  width: 100%;
+  padding: 14px 0;
+  margin-top: 1rem;
+  background: #e31c1c;
+  border: none;
+  border-radius: 10rem;
+  color: #ffffff;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(227, 28, 28, 0.45);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+/* Shine sweep */
+.btnPrimary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+  z-index: 0;
+}
+
+.btnPrimary:hover {
+  background: #ff3333;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 36px rgba(227, 28, 28, 0.6);
+}
+
+.btnPrimary:hover::after {
+  transform: translateX(100%);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}
+
+/* ─── Divider ────────────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 1.75rem 0 1.25rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a3a3a;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #2a2a2a;
+}
+
+/* ─── Ghost Button ───────────────────────────────────────────────── */
+.btnGhost {
+  width: 100%;
+  padding: 13px 0;
+  background: transparent;
+  border: 1.5px solid #2a2a2a;
+  border-radius: 10rem;
+  color: #5a5a5a;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  margin-bottom: 0.75rem;
+}
+
+.btnGhost:hover {
+  border-color: #e31c1c;
+  color: #ff6b6b;
+  background: rgba(227, 28, 28, 0.07);
+}
+
+/* ─── Forgot ─────────────────────────────────────────────────────── */
+.forgot {
+  text-align: center;
+  margin-top: 1.25rem;
+}
+
+.forgot button {
+  background: none;
+  border: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #3a3a3a;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.forgot button:hover {
+  color: #e31c1c;
+  text-decoration-color: #e31c1c;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .wrap::before,
+  .wrap::after {
+    display: none;
+  }
+
+  .card {
+    padding: 3rem 1.5rem;
+  }
+}
